@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭旅行费用 AA 记账本</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; }
+.app-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 16px 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+.app-header h1 { font-size: 20px; font-weight: 600; }
+.tab-bar { display: flex; background: #fff; border-bottom: 1px solid #e0e0e0; position: sticky; top: 56px; z-index: 99; }
+.tab-bar button { flex: 1; padding: 12px 8px; border: none; background: none; font-size: 13px; color: #888; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+.tab-bar button.active { color: #667eea; border-bottom-color: #667eea; font-weight: 600; }
+.container { max-width: 600px; margin: 0 auto; padding: 12px; }
+.card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #333; display: flex; align-items: center; justify-content: space-between; }
+.btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #667eea; color: #fff; }
+.btn-primary:active { background: #5568d3; }
+.btn-danger { background: #ff4757; color: #fff; }
+.btn-danger:active { background: #e8384f; }
+.btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+.btn-outline { background: none; border: 1px solid #ddd; color: #666; }
+.btn-outline:active { background: #f0f0f0; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 500; }
+.form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: #fafafa; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; background: #fff; }
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 13px; padding: 6px 10px; background: #f0f2f5; border-radius: 6px; cursor: pointer; }
+.checkbox-group input[type="checkbox"] { width: auto; accent-color: #667eea; }
+.member-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #f0f2f5; border-radius: 16px; font-size: 13px; margin: 2px; }
+.member-tag .family { color: #999; font-size: 11px; }
+.member-tag .remove { color: #ff4757; cursor: pointer; font-size: 16px; line-height: 1; margin-left: 2px; }
+.expense-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+.expense-item:last-child { border-bottom: none; }
+.expense-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.expense-desc { font-weight: 500; font-size: 14px; }
+.expense-amount { font-weight: 600; color: #667eea; font-size: 15px; white-space: nowrap; }
+.expense-meta { font-size: 12px; color: #999; margin-top: 4px; line-height: 1.5; }
+.expense-meta span { margin-right: 8px; }
+.settle-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; }
+.settle-item:last-child { border-bottom: none; }
+.settle-arrow { color: #667eea; font-weight: 600; margin: 0 8px; }
+.settle-amount { font-weight: 600; color: #ff6b6b; }
+.stat-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f5f5f5; }
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: #666; }
+.stat-value { font-weight: 600; }
+.balance-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f5f5f5; }
+.balance-row:last-child { border-bottom: none; }
+.balance-name { font-weight: 500; }
+.balance-detail { font-size: 12px; color: #999; }
+.balance-net { font-weight: 600; }
+.balance-net.positive { color: #2ed573; }
+.balance-net.negative { color: #ff4757; }
+.balance-net.zero { color: #999; }
+.chart-container { position: relative; width: 100%; max-height: 300px; margin: 12px 0; }
+.chart-container canvas { width: 100% !important; max-height: 280px; }
+.empty-state { text-align: center; padding: 30px 0; color: #ccc; font-size: 14px; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 16px; padding: 20px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+.modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal-actions .btn { flex: 1; padding: 10px; }
+.family-section { margin-bottom: 12px; }
+.family-label { font-size: 12px; color: #999; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.add-family-row { display: flex; gap: 8px; }
+.add-family-row input { flex: 1; }
+.select-all-btn { font-size: 12px; color: #667eea; cursor: pointer; background: none; border: none; padding: 4px 8px; }
+@media (max-width: 400px) {
+  .container { padding: 8px; }
+  .card { padding: 12px; }
+  .tab-bar button { font-size: 12px; padding: 10px 4px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="app-header">
+    <h1>家庭旅行费用 AA 记账本</h1>
+  </div>
+  <div class="tab-bar">
+    <button :class="{active: tab==='members'}" @click="tab='members'">成员</button>
+    <button :class="{active: tab==='expense'}" @click="tab='expense'">记账</button>
+    <button :class="{active: tab==='settle'}" @click="tab='settle'">结算</button>
+    <button :class="{active: tab==='stats'}" @click="tab='stats'; $nextTick(renderCharts)">统计</button>
+  </div>
+
+  <!-- 成员管理 -->
+  <div class="container" v-show="tab==='members'">
+    <div class="card">
+      <div class="card-title">
+        <span>家庭成员管理</span>
+        <button class="btn btn-primary btn-sm" @click="showAddMember=true">+ 添加</button>
+      </div>
+      <div v-for="family in familyList" :key="family" class="family-section">
+        <div class="family-label">{{ family }}</div>
+        <div>
+          <span class="member-tag" v-for="m in members.filter(x=>x.family===family)" :key="m.id">
+            {{ m.name }}
+            <span class="remove" @click="removeMember(m.id)" v-if="members.length>1">&times;</span>
+          </span>
+        </div>
+      </div>
+      <div v-if="members.length===0" class="empty-state">暂无成员</div>
+    </div>
+
+    <div class="modal-overlay" v-if="showAddMember" @click.self="showAddMember=false">
+      <div class="modal">
+        <div class="modal-title">添加成员</div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input v-model="newMember.name" placeholder="输入姓名" />
+        </div>
+        <div class="form-group">
+          <label>所属家庭</label>
+          <div class="add-family-row">
+            <select v-model="newMember.family">
+              <option v-for="f in familyList" :key="f" :value="f">{{ f }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>或新建家庭</label>
+          <input v-model="newFamilyName" placeholder="输入家庭名称（如：赵家）" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" @click="showAddMember=false">取消</button>
+          <button class="btn btn-primary" @click="addMember">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 记账 -->
+  <div class="container" v-show="tab==='expense'">
+    <div class="card">
+      <div class="card-title">
+        <span>添加消费</span>
+      </div>
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" v-model="newExpense.date" />
+      </div>
+      <div class="form-group">
+        <label>消费描述</label>
+        <input v-model="newExpense.desc" placeholder="如：晚餐、门票、住宿" />
+      </div>
+      <div class="form-group">
+        <label>类别</label>
+        <select v-model="newExpense.category">
+          <option value="餐饮">餐饮</option>
+          <option value="住宿">住宿</option>
+          <option value="交通">交通</option>
+          <option value="门票">门票</option>
+          <option value="购物">购物</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>金额（元）</label>
+        <input type="number" v-model.number="newExpense.amount" placeholder="0.00" min="0" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label>垫付人</label>
+        <select v-model="newExpense.payer">
+          <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}（{{ m.family }}）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          参与人（分摊）
+          <button class="select-all-btn" @click="toggleAllParticipants">{{ allSelected ? '取消全选' : '全选' }}</button>
+        </label>
+        <div class="checkbox-group">
+          <label v-for="m in members" :key="m.id">
+            <input type="checkbox" :value="m.id" v-model="newExpense.participants" />
+            {{ m.name }}
+          </label>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;" @click="addExpense" :disabled="!canAddExpense">添加记录</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">消费明细（{{ expenses.length }}笔）</div>
+      <div v-if="expenses.length===0" class="empty-state">暂无消费记录</div>
+      <div v-for="e in sortedExpenses" :key="e.id" class="expense-item">
+        <div class="expense-header">
+          <div>
+            <div class="expense-desc">{{ e.desc }}</div>
+            <div class="expense-meta">
+              <span>{{ e.date }}</span>
+              <span>{{ e.category }}</span>
+              <span>{{ getMemberName(e.payer) }} 垫付</span>
+              <span>{{ e.participants.length }}人分摊</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="expense-amount">{{ e.amount.toFixed(2) }}元</div>
+            <div style="font-size:11px;color:#999;">人均 {{ (e.amount / e.participants.length).toFixed(2) }}</div>
+            <button class="btn btn-danger btn-sm" style="margin-top:4px;" @click="removeExpense(e.id)">删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结算 -->
+  <div class="container" v-show="tab==='settle'">
+    <div class="card">
+      <div class="card-title">个人收支明细</div>
+      <div v-if="expenses.length===0" class="empty-state">暂无消费记录</div>
+      <div v-for="m in members" :key="m.id" class="balance-row">
+        <div>
+          <div class="balance-name">{{ m.name }} <span style="color:#999;font-size:12px;">{{ m.family }}</span></div>
+          <div class="balance-detail">
+            垫付 {{ getBalance(m.id).paid.toFixed(2) }} / 应付 {{ getBalance(m.id).owe.toFixed(2) }}
+          </div>
+        </div>
+        <div class="balance-net" :class="getBalance(m.id).net > 0 ? 'positive' : getBalance(m.id).net < 0 ? 'negative' : 'zero'">
+          {{ getBalance(m.id).net > 0 ? '+' : '' }}{{ getBalance(m.id).net.toFixed(2) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最优结算方案</div>
+      <div v-if="settlements.length===0" class="empty-state">无需转账，已结清</div>
+      <div v-for="(s, i) in settlements" :key="i" class="settle-item">
+        <span>{{ getMemberName(s.from) }}</span>
+        <span class="settle-arrow">&rarr;</span>
+        <span>{{ getMemberName(s.to) }}</span>
+        <span class="settle-amount" style="margin-left:auto;">{{ s.amount.toFixed(2) }} 元</span>
+      </div>
+      <div v-if="settlements.length>0" style="margin-top:12px;padding-top:8px;border-top:1px solid #f0f0f0;font-size:12px;color:#999;text-align:center;">
+        共需 {{ settlements.length }} 笔转账
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">数据导出</div>
+      <button class="btn btn-primary" style="width:100%;" @click="exportCSV">导出 CSV 消费明细</button>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="container" v-show="tab==='stats'">
+    <div class="card">
+      <div class="card-title">旅行总览</div>
+      <div class="stat-row">
+        <span class="stat-label">总消费</span>
+        <span class="stat-value">{{ totalExpense.toFixed(2) }} 元</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">消费笔数</span>
+        <span class="stat-value">{{ expenses.length }} 笔</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">参与人数</span>
+        <span class="stat-value">{{ members.length }} 人</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">人均花费</span>
+        <span class="stat-value">{{ avgExpense.toFixed(2) }} 元</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">各家庭消费占比</div>
+      <div class="chart-container"><canvas id="familyChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">消费类别分布</div>
+      <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">家庭消费汇总</div>
+      <div v-for="(amount, family) in familyExpense" :key="family" class="stat-row">
+        <span class="stat-label">{{ family }}</span>
+        <span class="stat-value">{{ amount.toFixed(2) }} 元</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+const STORAGE_KEY = 'travel_aa_book';
+
+const defaultMembers = [
+  { id: 'm1', name: '张爸爸', family: '张家' },
+  { id: 'm2', name: '张妈妈', family: '张家' },
+  { id: 'm3', name: '张爷爷', family: '张家' },
+  { id: 'm4', name: '李爸爸', family: '李家' },
+  { id: 'm5', name: '李妈妈', family: '李家' },
+  { id: 'm6', name: '王爸爸', family: '王家' },
+  { id: 'm7', name: '王妈妈', family: '王家' },
+];
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function saveData(members, expenses) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ members, expenses }));
+}
+
+function genId() {
+  return '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function minimizeSettlements(balances) {
+  // balances: [{id, net}] where net>0 means should receive, net<0 means should pay
+  const debtors = []; // owe money (net < 0)
+  const creditors = []; // should receive (net > 0)
+  const EPS = 0.005;
+
+  balances.forEach(b => {
+    if (b.net < -EPS) debtors.push({ id: b.id, amount: -b.net });
+    else if (b.net > EPS) creditors.push({ id: b.id, amount: b.net });
+  });
+
+  const settlements = [];
+
+  // Sort descending for greedy matching
+  debtors.sort((a, b) => b.amount - a.amount);
+  creditors.sort((a, b) => b.amount - a.amount);
+
+  let i = 0, j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    const d = debtors[i];
+    const c = creditors[j];
+    const amt = Math.min(d.amount, c.amount);
+    if (amt > EPS) {
+      settlements.push({ from: d.id, to: c.id, amount: Math.round(amt * 100) / 100 });
+    }
+    d.amount -= amt;
+    c.amount -= amt;
+    if (d.amount < EPS) i++;
+    if (c.amount < EPS) j++;
+  }
+
+  return settlements;
+}
+
+const app = createApp({
+  setup() {
+    const saved = loadData();
+    const members = ref(saved?.members?.length ? saved.members : [...defaultMembers]);
+    const expenses = ref(saved?.expenses || []);
+    const tab = ref('members');
+
+    // Add member
+    const showAddMember = ref(false);
+    const newMember = ref({ name: '', family: '张家' });
+    const newFamilyName = ref('');
+
+    const familyList = computed(() => {
+      const families = new Set(members.value.map(m => m.family));
+      return [...families].sort();
+    });
+
+    function addMember() {
+      const name = newMember.value.name.trim();
+      if (!name) return;
+      const family = newFamilyName.value.trim() || newMember.value.family;
+      if (!family) return;
+      members.value.push({ id: genId(), name, family });
+      newMember.value = { name: '', family: familyList.value[0] || '张家' };
+      newFamilyName.value = '';
+      showAddMember.value = false;
+      persist();
+    }
+
+    function removeMember(id) {
+      if (!confirm('确定删除该成员？相关的消费记录也会受影响。')) return;
+      members.value = members.value.filter(m => m.id !== id);
+      // Remove from expense participants
+      expenses.value = expenses.value.map(e => ({
+        ...e,
+        participants: e.participants.filter(p => p !== id),
+        payer: e.payer === id ? (members.value[0]?.id || '') : e.payer,
+      })).filter(e => e.participants.length > 0 && e.payer);
+      persist();
+    }
+
+    function getMemberName(id) {
+      const m = members.value.find(x => x.id === id);
+      return m ? m.name : '未知';
+    }
+
+    // Add expense
+    const today = new Date().toISOString().slice(0, 10);
+    const newExpense = ref({
+      date: today,
+      desc: '',
+      category: '餐饮',
+      amount: null,
+      payer: members.value[0]?.id || '',
+      participants: members.value.map(m => m.id),
+    });
+
+    const allSelected = computed(() =>
+      members.value.length > 0 && newExpense.value.participants.length === members.value.length
+    );
+
+    function toggleAllParticipants() {
+      if (allSelected.value) {
+        newExpense.value.participants = [];
+      } else {
+        newExpense.value.participants = members.value.map(m => m.id);
+      }
+    }
+
+    const canAddExpense = computed(() =>
+      newExpense.value.desc.trim() &&
+      newExpense.value.amount > 0 &&
+      newExpense.value.payer &&
+      newExpense.value.participants.length > 0
+    );
+
+    function addExpense() {
+      if (!canAddExpense.value) return;
+      expenses.value.push({
+        id: genId(),
+        date: newExpense.value.date,
+        desc: newExpense.value.desc.trim(),
+        category: newExpense.value.category,
+        amount: Math.round(newExpense.value.amount * 100) / 100,
+        payer: newExpense.value.payer,
+        participants: [...newExpense.value.participants],
+      });
+      newExpense.value.desc = '';
+      newExpense.value.amount = null;
+      persist();
+    }
+
+    function removeExpense(id) {
+      expenses.value = expenses.value.filter(e => e.id !== id);
+      persist();
+    }
+
+    const sortedExpenses = computed(() =>
+      [...expenses.value].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    );
+
+    // Balance
+    function getBalance(memberId) {
+      let paid = 0;
+      let owe = 0;
+      expenses.value.forEach(e => {
+        const share = e.amount / e.participants.length;
+        if (e.payer === memberId) paid += e.amount;
+        if (e.participants.includes(memberId)) owe += share;
+      });
+      return { paid, owe, net: paid - owe };
+    }
+
+    // Settlements
+    const settlements = computed(() => {
+      const balances = members.value.map(m => ({
+        id: m.id,
+        net: getBalance(m.id).net,
+      }));
+      return minimizeSettlements(balances);
+    });
+
+    // Stats
+    const totalExpense = computed(() => expenses.value.reduce((s, e) => s + e.amount, 0));
+    const avgExpense = computed(() => members.value.length > 0 ? totalExpense.value / members.value.length : 0);
+
+    const familyExpense = computed(() => {
+      const map = {};
+      expenses.value.forEach(e => {
+        const payer = members.value.find(m => m.id === e.payer);
+        if (payer) {
+          map[payer.family] = (map[payer.family] || 0) + e.amount;
+        }
+      });
+      return map;
+    });
+
+    const categoryExpense = computed(() => {
+      const map = {};
+      expenses.value.forEach(e => {
+        map[e.category] = (map[e.category] || 0) + e.amount;
+      });
+      return map;
+    });
+
+    // Charts
+    let familyChartInstance = null;
+    let categoryChartInstance = null;
+
+    const chartColors = [
+      '#667eea', '#ff6b6b', '#2ed573', '#ffa502', '#3742fa', '#ff4757', '#1e90ff', '#ff6348',
+      '#7bed9f', '#70a1ff', '#5352ed', '#eccc68',
+    ];
+
+    function renderCharts() {
+      if (tab.value !== 'stats') return;
+
+      // Family chart
+      const famLabels = Object.keys(familyExpense.value);
+      const famData = Object.values(familyExpense.value);
+      const familyCanvas = document.getElementById('familyChart');
+      if (familyCanvas) {
+        if (familyChartInstance) familyChartInstance.destroy();
+        familyChartInstance = new Chart(familyCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: famLabels,
+            datasets: [{
+              data: famData,
+              backgroundColor: chartColors.slice(0, famLabels.length),
+              borderWidth: 2,
+              borderColor: '#fff',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { position: 'bottom', labels: { padding: 16, font: { size: 13 } } },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.label}: ${ctx.raw.toFixed(2)} 元 (${(ctx.raw / totalExpense.value * 100).toFixed(1)}%)`
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Category chart
+      const catLabels = Object.keys(categoryExpense.value);
+      const catData = Object.values(categoryExpense.value);
+      const categoryCanvas = document.getElementById('categoryChart');
+      if (categoryCanvas) {
+        if (categoryChartInstance) categoryChartInstance.destroy();
+        categoryChartInstance = new Chart(categoryCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: catLabels,
+            datasets: [{
+              data: catData,
+              backgroundColor: chartColors.slice(0, catLabels.length),
+              borderWidth: 2,
+              borderColor: '#fff',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { position: 'bottom', labels: { padding: 16, font: { size: 13 } } },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.label}: ${ctx.raw.toFixed(2)} 元 (${(ctx.raw / totalExpense.value * 100).toFixed(1)}%)`
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Persist
+    function persist() {
+      saveData(members.value, expenses.value);
+    }
+
+    // Watch for changes
+    watch([members, expenses], persist, { deep: true });
+
+    // Watch tab to render charts
+    watch(tab, (v) => {
+      if (v === 'stats') nextTick(renderCharts);
+    });
+
+    // Update payer/participants when members change
+    watch(members, (newMembers) => {
+      const ids = newMembers.map(m => m.id);
+      if (!ids.includes(newExpense.value.payer)) {
+        newExpense.value.payer = ids[0] || '';
+      }
+      newExpense.value.participants = newExpense.value.participants.filter(id => ids.includes(id));
+    }, { deep: true });
+
+    // CSV Export
+    function exportCSV() {
+      const header = ['日期', '描述', '类别', '金额', '垫付人', '参与人', '人均金额'];
+      const rows = expenses.value.map(e => [
+        e.date,
+        `"${e.desc}"`,
+        e.category,
+        e.amount.toFixed(2),
+        `"${getMemberName(e.payer)}"`,
+        `"${e.participants.map(id => getMemberName(id)).join('、')}"`,
+        (e.amount / e.participants.length).toFixed(2),
+      ]);
+      const bom = '\uFEFF';
+      const csv = bom + [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `旅行消费明细_${today}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Initialize
+    onMounted(() => {
+      if (!newExpense.value.payer && members.value.length) {
+        newExpense.value.payer = members.value[0].id;
+      }
+      if (!newExpense.value.participants.length) {
+        newExpense.value.participants = members.value.map(m => m.id);
+      }
+    });
+
+    return {
+      tab, members, expenses, sortedExpenses,
+      showAddMember, newMember, newFamilyName, familyList,
+      addMember, removeMember, getMemberName,
+      newExpense, allSelected, toggleAllParticipants, canAddExpense,
+      addExpense, removeExpense,
+      getBalance, settlements,
+      totalExpense, avgExpense, familyExpense, categoryExpense,
+      renderCharts, exportCSV,
+    };
+  }
+});
+
+app.mount('#app');
+</script>
+</body>
+</html>

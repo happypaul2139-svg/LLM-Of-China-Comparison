@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>家庭旅行费用 AA 记账本</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .app {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        .tab {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 8px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e63946;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .btn-block {
+            width: 100%;
+        }
+        .member-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .family-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            background: #e9ecef;
+            border-radius: 10px;
+            color: #666;
+        }
+        .expense-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .expense-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+        }
+        .expense-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .expense-desc {
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+        .expense-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .expense-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        .expense-meta span {
+            background: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .expense-per {
+            color: #28a745;
+            font-weight: 500;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #ff4757;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+            border-radius: 10px;
+        }
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .settlement-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .settlement-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 8px;
+            gap: 10px;
+        }
+        .settlement-arrow {
+            color: #667eea;
+            font-size: 20px;
+        }
+        .balance-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .balance-positive {
+            color: #28a745;
+        }
+        .balance-negative {
+            color: #ff4757;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin: 16px 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .checkbox-item input {
+            cursor: pointer;
+        }
+        .select-all-btn {
+            font-size: 12px;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .inline-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .inline-form .form-input {
+            flex: 1;
+        }
+        @media (max-width: 480px) {
+            .app {
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+            .tabs {
+                overflow-x: auto;
+            }
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="app">
+        <div class="header">
+            <h1>🏠 家庭旅行 AA 记账本</h1>
+        </div>
+
+        <div class="tabs">
+            <button class="tab" :class="{active: activeTab === 'expense'}" @click="activeTab = 'expense'">记账</button>
+            <button class="tab" :class="{active: activeTab === 'members'}" @click="activeTab = 'members'">成员</button>
+            <button class="tab" :class="{active: activeTab === 'settlement'}" @click="activeTab = 'settlement'">结算</button>
+            <button class="tab" :class="{active: activeTab === 'stats'}" @click="activeTab = 'stats'">统计</button>
+        </div>
+
+        <!-- 记账页面 -->
+        <div v-if="activeTab === 'expense'">
+            <div class="card">
+                <div class="card-title">📝 添加消费记录</div>
+                <div class="form-group">
+                    <label class="form-label">日期</label>
+                    <input type="date" class="form-input" v-model="newExpense.date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">消费描述</label>
+                    <input type="text" class="form-input" v-model="newExpense.description" placeholder="如：午餐、门票、交通">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">金额（元）</label>
+                    <input type="number" class="form-input" v-model.number="newExpense.amount" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">垫付人</label>
+                    <select class="form-input" v-model="newExpense.payer">
+                        <option value="">请选择</option>
+                        <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }} ({{ m.family }})</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        参与人
+                        <button class="select-all-btn" @click="selectAllParticipants" style="margin-left: 8px;">全选</button>
+                        <button class="select-all-btn" @click="clearParticipants" style="margin-left: 4px;">清空</button>
+                    </label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item" v-for="m in members" :key="m.id">
+                            <input type="checkbox" :value="m.id" v-model="newExpense.participants">
+                            {{ m.name }}
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-block" @click="addExpense" :disabled="!canAddExpense">添加记录</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💰 消费明细 ({{ expenses.length }} 笔)</div>
+                <div v-if="expenses.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>暂无消费记录</div>
+                </div>
+                <div class="expense-list" v-else>
+                    <div class="expense-item" v-for="e in sortedExpenses" :key="e.id">
+                        <button class="delete-btn" @click="deleteExpense(e.id)">×</button>
+                        <div class="expense-header">
+                            <div class="expense-desc">{{ e.description }}</div>
+                            <div class="expense-amount">¥{{ e.amount.toFixed(2) }}</div>
+                        </div>
+                        <div class="expense-meta">
+                            <span>📅 {{ e.date }}</span>
+                            <span>👤 {{ getMemberName(e.payer) }} 垫付</span>
+                            <span class="expense-per">人均 ¥{{ getPerPerson(e) }}</span>
+                        </div>
+                        <div class="expense-meta" style="margin-top: 6px;">
+                            <span>👥 {{ getParticipantNames(e) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成员管理页面 -->
+        <div v-if="activeTab === 'members'">
+            <div class="card">
+                <div class="card-title">➕ 添加成员</div>
+                <div class="inline-form">
+                    <input type="text" class="form-input" v-model="newMember.name" placeholder="姓名">
+                    <input type="text" class="form-input" v-model="newMember.family" placeholder="家庭" style="max-width: 120px;">
+                </div>
+                <button class="btn btn-primary btn-block" @click="addMember" :disabled="!newMember.name || !newMember.family">添加</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">👨‍👩‍👧‍👦 旅行成员 ({{ members.length }} 人)</div>
+                <div class="member-list">
+                    <div class="member-item" v-for="m in members" :key="m.id">
+                        <div class="member-info">
+                            <div class="member-avatar">{{ m.name.charAt(0) }}</div>
+                            <div>
+                                <div style="font-weight: 500;">{{ m.name }}</div>
+                                <div class="family-tag">{{ m.family }}</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" @click="deleteMember(m.id)">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结算页面 -->
+        <div v-if="activeTab === 'settlement'">
+            <div class="card">
+                <div class="card-title">📊 费用概览</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value">¥{{ totalAmount.toFixed(2) }}</div>
+                        <div class="summary-label">总消费</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value">¥{{ perPersonAverage.toFixed(2) }}</div>
+                        <div class="summary-label">人均应付</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💵 个人收支明细</div>
+                <div v-for="b in balanceDetails" :key="b.id" class="balance-item">
+                    <div>
+                        <span style="font-weight: 500;">{{ b.name }}</span>
+                        <span class="family-tag" style="margin-left: 6px;">{{ b.family }}</span>
+                    </div>
+                    <div>
+                        <span class="balance-positive" v-if="b.net >= 0">+¥{{ b.net.toFixed(2) }}</span>
+                        <span class="balance-negative" v-else>-¥{{ Math.abs(b.net).toFixed(2) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔄 最优结算方案</div>
+                <div v-if="settlementPlan.length === 0" class="empty-state">
+                    <div class="empty-state-icon">✅</div>
+                    <div>已结清，无需转账</div>
+                </div>
+                <div class="settlement-list" v-else>
+                    <div class="settlement-item" v-for="(s, i) in settlementPlan" :key="i">
+                        <span style="font-weight: 500;">{{ s.from }}</span>
+                        <span class="settlement-arrow">→</span>
+                        <span style="font-weight: 500;">{{ s.to }}</span>
+                        <span style="color: #667eea; font-weight: 700;">¥{{ s.amount.toFixed(2) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计页面 -->
+        <div v-if="activeTab === 'stats'">
+            <div class="card">
+                <div class="card-title">📈 按家庭消费占比</div>
+                <div class="chart-container">
+                    <canvas ref="familyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🥧 消费结构</div>
+                <div class="chart-container">
+                    <canvas ref="categoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📋 家庭消费明细</div>
+                <div v-for="f in familySummary" :key="f.name" class="balance-item">
+                    <div>
+                        <span style="font-weight: 500;">{{ f.name }}</span>
+                        <span style="color: #888; font-size: 12px; margin-left: 8px;">({{ f.members.join('、') }})</span>
+                    </div>
+                    <div style="font-weight: 600; color: #667eea;">¥{{ f.amount.toFixed(2) }}</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💾 导出数据</div>
+                <button class="btn btn-primary btn-block" @click="exportCSV">导出为 CSV 文件</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'expense',
+                    members: [],
+                    expenses: [],
+                    newMember: { name: '', family: '' },
+                    newExpense: {
+                        date: new Date().toISOString().split('T')[0],
+                        description: '',
+                        amount: null,
+                        payer: '',
+                        participants: []
+                    },
+                    familyChart: null,
+                    categoryChart: null
+                };
+            },
+            computed: {
+                canAddExpense() {
+                    return this.newExpense.date &&
+                           this.newExpense.description &&
+                           this.newExpense.amount > 0 &&
+                           this.newExpense.payer &&
+                           this.newExpense.participants.length > 0;
+                },
+                sortedExpenses() {
+                    return [...this.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+                },
+                totalAmount() {
+                    return this.expenses.reduce((sum, e) => sum + e.amount, 0);
+                },
+                perPersonAverage() {
+                    if (this.members.length === 0) return 0;
+                    return this.totalAmount / this.members.length;
+                },
+                balanceDetails() {
+                    const balances = {};
+                    this.members.forEach(m => {
+                        balances[m.id] = { ...m, paid: 0, owe: 0, net: 0 };
+                    });
+
+                    this.expenses.forEach(e => {
+                        if (balances[e.payer]) {
+                            balances[e.payer].paid += e.amount;
+                        }
+                        const perPerson = e.amount / e.participants.length;
+                        e.participants.forEach(pid => {
+                            if (balances[pid]) {
+                                balances[pid].owe += perPerson;
+                            }
+                        });
+                    });
+
+                    return Object.values(balances).map(b => ({
+                        ...b,
+                        net: b.paid - b.owe
+                    }));
+                },
+                settlementPlan() {
+                    const debtors = [];
+                    const creditors = [];
+
+                    this.balanceDetails.forEach(b => {
+                        if (b.net < -0.01) {
+                            debtors.push({ name: b.name, id: b.id, amount: -b.net });
+                        } else if (b.net > 0.01) {
+                            creditors.push({ name: b.name, id: b.id, amount: b.net });
+                        }
+                    });
+
+                    debtors.sort((a, b) => b.amount - a.amount);
+                    creditors.sort((a, b) => b.amount - a.amount);
+
+                    const plan = [];
+                    let i = 0, j = 0;
+                    while (i < debtors.length && j < creditors.length) {
+                        const debtor = debtors[i];
+                        const creditor = creditors[j];
+                        const amount = Math.min(debtor.amount, creditor.amount);
+
+                        if (amount > 0.01) {
+                            plan.push({
+                                from: debtor.name,
+                                to: creditor.name,
+                                amount: Math.round(amount * 100) / 100
+                            });
+                        }
+
+                        debtor.amount -= amount;
+                        creditor.amount -= amount;
+
+                        if (debtor.amount < 0.01) i++;
+                        if (creditor.amount < 0.01) j++;
+                    }
+
+                    return plan;
+                },
+                familySummary() {
+                    const families = {};
+                    this.members.forEach(m => {
+                        if (!families[m.family]) {
+                            families[m.family] = { name: m.family, members: [], amount: 0 };
+                        }
+                        families[m.family].members.push(m.name);
+                    });
+
+                    this.expenses.forEach(e => {
+                        const perPerson = e.amount / e.participants.length;
+                        e.participants.forEach(pid => {
+                            const member = this.members.find(m => m.id === pid);
+                            if (member && families[member.family]) {
+                                families[member.family].amount += perPerson;
+                            }
+                        });
+                    });
+
+                    return Object.values(families).sort((a, b) => b.amount - a.amount);
+                }
+            },
+            watch: {
+                activeTab(val) {
+                    if (val === 'stats') {
+                        this.$nextTick(() => this.renderCharts());
+                    }
+                }
+            },
+            methods: {
+                initData() {
+                    const savedMembers = localStorage.getItem('travel_members');
+                    const savedExpenses = localStorage.getItem('travel_expenses');
+
+                    if (savedMembers) {
+                        this.members = JSON.parse(savedMembers);
+                    } else {
+                        this.members = [
+                            { id: 1, name: '张爸爸', family: '张家' },
+                            { id: 2, name: '张妈妈', family: '张家' },
+                            { id: 3, name: '李爷爷', family: '李家' },
+                            { id: 4, name: '李妈妈', family: '李家' },
+                            { id: 5, name: '王小明', family: '王家' },
+                            { id: 6, name: '王妈妈', family: '王家' },
+                            { id: 7, name: '陈朋友', family: '陈家' }
+                        ];
+                        this.saveMembers();
+                    }
+
+                    if (savedExpenses) {
+                        this.expenses = JSON.parse(savedExpenses);
+                    }
+                },
+                saveMembers() {
+                    localStorage.setItem('travel_members', JSON.stringify(this.members));
+                },
+                saveExpenses() {
+                    localStorage.setItem('travel_expenses', JSON.stringify(this.expenses));
+                },
+                addMember() {
+                    if (!this.newMember.name || !this.newMember.family) return;
+                    const id = Math.max(0, ...this.members.map(m => m.id)) + 1;
+                    this.members.push({ id, ...this.newMember });
+                    this.newMember = { name: '', family: '' };
+                    this.saveMembers();
+                },
+                deleteMember(id) {
+                    this.members = this.members.filter(m => m.id !== id);
+                    this.expenses.forEach(e => {
+                        e.participants = e.participants.filter(pid => pid !== id);
+                    });
+                    this.expenses = this.expenses.filter(e => e.payer !== id);
+                    this.saveMembers();
+                    this.saveExpenses();
+                },
+                addExpense() {
+                    if (!this.canAddExpense) return;
+                    const id = Math.max(0, ...this.expenses.map(e => e.id)) + 1;
+                    this.expenses.push({
+                        id,
+                        ...this.newExpense,
+                        amount: parseFloat(this.newExpense.amount)
+                    });
+                    this.newExpense = {
+                        date: new Date().toISOString().split('T')[0],
+                        description: '',
+                        amount: null,
+                        payer: '',
+                        participants: []
+                    };
+                    this.saveExpenses();
+                },
+                deleteExpense(id) {
+                    this.expenses = this.expenses.filter(e => e.id !== id);
+                    this.saveExpenses();
+                },
+                getMemberName(id) {
+                    const m = this.members.find(m => m.id === id);
+                    return m ? m.name : '未知';
+                },
+                getPerPerson(e) {
+                    return (e.amount / e.participants.length).toFixed(2);
+                },
+                getParticipantNames(e) {
+                    return e.participants.map(pid => this.getMemberName(pid)).join('、');
+                },
+                selectAllParticipants() {
+                    this.newExpense.participants = this.members.map(m => m.id);
+                },
+                clearParticipants() {
+                    this.newExpense.participants = [];
+                },
+                renderCharts() {
+                    this.renderFamilyChart();
+                    this.renderCategoryChart();
+                },
+                renderFamilyChart() {
+                    const canvas = this.$refs.familyChart;
+                    if (!canvas) return;
+
+                    if (this.familyChart) {
+                        this.familyChart.destroy();
+                    }
+
+                    const data = this.familySummary.filter(f => f.amount > 0);
+                    if (data.length === 0) return;
+
+                    const colors = [
+                        '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                        '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                    ];
+
+                    this.familyChart = new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: data.map(f => f.name),
+                            datasets: [{
+                                label: '消费金额',
+                                data: data.map(f => f.amount),
+                                backgroundColor: colors.slice(0, data.length),
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '¥' + value
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+                renderCategoryChart() {
+                    const canvas = this.$refs.categoryChart;
+                    if (!canvas) return;
+
+                    if (this.categoryChart) {
+                        this.categoryChart.destroy();
+                    }
+
+                    const categories = {};
+                    this.expenses.forEach(e => {
+                        const cat = this.extractCategory(e.description);
+                        if (!categories[cat]) {
+                            categories[cat] = 0;
+                        }
+                        categories[cat] += e.amount;
+                    });
+
+                    const data = Object.entries(categories)
+                        .map(([name, amount]) => ({ name, amount }))
+                        .sort((a, b) => b.amount - a.amount);
+
+                    if (data.length === 0) return;
+
+                    const colors = [
+                        '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                        '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                    ];
+
+                    this.categoryChart = new Chart(canvas, {
+                        type: 'pie',
+                        data: {
+                            labels: data.map(d => d.name),
+                            datasets: [{
+                                data: data.map(d => d.amount),
+                                backgroundColor: colors.slice(0, data.length),
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right'
+                                }
+                            }
+                        }
+                    });
+                },
+                extractCategory(desc) {
+                    const keywords = {
+                        '餐饮': ['餐', '吃', '饭', '食', '火锅', '烧烤', '自助'],
+                        '交通': ['车', '交通', '油', '停车', '地铁', '公交', '打车', ' taxi'],
+                        '住宿': ['酒店', '住宿', '房', '民宿'],
+                        '门票': ['门票', '票', '景区', '公园'],
+                        '购物': ['购物', '买', '超市', '商场'],
+                        '娱乐': ['娱乐', 'KTV', '电影', '游戏']
+                    };
+
+                    for (const [cat, words] of Object.entries(keywords)) {
+                        if (words.some(w => desc.includes(w))) {
+                            return cat;
+                        }
+                    }
+                    return '其他';
+                },
+                exportCSV() {
+                    let csv = '\uFEFF';
+                    csv += '日期,描述,金额,垫付人,参与人,人均金额\n';
+
+                    this.expenses.forEach(e => {
+                        const row = [
+                            e.date,
+                            `"${e.description}"`,
+                            e.amount.toFixed(2),
+                            this.getMemberName(e.payer),
+                            `"${this.getParticipantNames(e)}"`,
+                            this.getPerPerson(e)
+                        ];
+                        csv += row.join(',') + '\n';
+                    });
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `旅行记账_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            },
+            mounted() {
+                this.initData();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
